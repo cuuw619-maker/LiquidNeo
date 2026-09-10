@@ -12,14 +12,6 @@ import restudio.reglassneo.client.render.LiquidGlassRenderer;
 
 @Mixin(AbstractWidget.class)
 public abstract class AbstractWidgetMixin {
-    // These declarations are supplied by AbstractWidget at runtime by Mixin.
-    // Declaring them here lets the mixin source compile while preserving direct
-    // this.getX()/getY()/getWidth()/getHeight() calls in the overwritten method.
-    public abstract int getX();
-    public abstract int getY();
-    public abstract int getWidth();
-    public abstract int getHeight();
-
     @Overwrite
     protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (!((Object) this instanceof Button button)) return;
@@ -40,10 +32,10 @@ public abstract class AbstractWidgetMixin {
 
         LiquidGlassRenderer.renderCapsule(
                 graphics,
-                this.getX(),
-                this.getY(),
-                this.getWidth(),
-                this.getHeight(),
+                button.x,
+                button.y,
+                button.width,
+                button.height,
                 -1.0f,
                 style
         );
@@ -52,8 +44,8 @@ public abstract class AbstractWidgetMixin {
             graphics.drawCenteredString(
                     Minecraft.getInstance().font,
                     button.getMessage(),
-                    this.getX() + this.getWidth() / 2,
-                    this.getY() + (this.getHeight() - 8) / 2,
+                    button.x + button.width / 2,
+                    button.y + (button.height - 8) / 2,
                     button.active ? 0xFFFFFFFF : 0xFF8D919A
             );
         }
