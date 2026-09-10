@@ -13,7 +13,8 @@ import restudio.reglass.client.config.ReGlassSettingsIO;
 
 public final class ReGlassSodiumConfigEntryPoint implements ConfigEntryPoint {
     @Override public void registerConfigLate(ConfigBuilder builder) {
-        if (!ModList.get().isLoaded("reeses-sodium-options")) return;
+        // Reese's Sodium Options uses the underscore form as its NeoForge mod id.
+        if (!ModList.get().isLoaded("reeses_sodium_options")) return;
         ReGlass.LOGGER.info("ReGlass detected Reese's Sodium Options; registering Liquid Glass settings");
         builder.registerOwnModOptions().addPage(createPage(builder));
     }
