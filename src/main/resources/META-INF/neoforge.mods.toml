@@ -33,6 +33,22 @@ ordering="AFTER"
 side="CLIENT"
 mandatory=true
 
+[[dependencies.${mod_id}]]
+modId="sodium"
+type="optional"
+versionRange="[0.8.12,)"
+ordering="AFTER"
+side="CLIENT"
+mandatory=false
+
+[[dependencies.${mod_id}]]
+modId="reeses_sodium_options"
+type="optional"
+versionRange="[1.8.3,)"
+ordering="AFTER"
+side="CLIENT"
+mandatory=false
+
 [modproperties.${mod_id}]
 "sodium:config_api_user"="restudio.reglass.client.integration.ReGlassSodiumConfigEntryPoint"
 
