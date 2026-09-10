@@ -12,36 +12,58 @@ import restudio.reglass.client.api.ReGlassConfig;
 import restudio.reglass.client.config.ReGlassSettingsIO;
 
 public final class ReGlassSodiumConfigEntryPoint implements ConfigEntryPoint {
-    @Override public void registerConfigLate(ConfigBuilder builder) {
-        // Reese's Sodium Options uses the underscore form as its NeoForge mod id.
+    @Override
+    public void registerConfigLate(ConfigBuilder builder) {
         if (!ModList.get().isLoaded("reeses_sodium_options")) return;
         ReGlass.LOGGER.info("ReGlass detected Reese's Sodium Options; registering Liquid Glass settings");
         builder.registerOwnModOptions().addPage(createPage(builder));
     }
+
     private OptionPageBuilder createPage(ConfigBuilder builder) {
         return builder.createOptionPage().setName(Component.literal("Liquid Glass"))
-                .addOptionGroup(createAppearance(builder)).addOptionGroup(createShadow(builder));
+                .addOptionGroup(createAppearance(builder))
+                .addOptionGroup(createShadow(builder));
     }
+
     private OptionGroupBuilder createAppearance(ConfigBuilder builder) {
-        ReGlassConfig c=ReGlassConfig.INSTANCE;
+        ReGlassConfig c = ReGlassConfig.INSTANCE;
         return builder.createOptionGroup().setName(Component.literal("Appearance"))
-                .addOption(builder.createIntegerOption(id("blur_radius")).setName(Component.literal("Blur Radius"))
-                        .setTooltip(Component.literal("Liquid Glass blur radius")).setDefaultValue(c.defaultBlurRadius).setRange(0,32,1)
-                        .setBinding(v->{c.defaultBlurRadius=v;save();},()->c.defaultBlurRadius))
-                .addOption(builder.createIntegerOption(id("tint_alpha")).setName(Component.literal("Tint Alpha"))
-                        .setTooltip(Component.literal("Glass tint opacity, percent")).setDefaultValue(Math.round(c.defaultTintAlpha*100f)).setRange(0,100,1)
-                        .setBinding(v->{c.defaultTintAlpha=v/100f;save();},()->Math.round(c.defaultTintAlpha*100f)));
+                .addOption(builder.createIntegerOption(id("blur_radius"))
+                        .setStorageHandler(ReGlassSettingsIO::saveFromMemory)
+                        .setName(Component.literal("Blur Radius"))
+                        .setTooltip(Component.literal("Liquid Glass blur radius"))
+                        .setDefaultValue(c.defaultBlurRadius)
+                        .setRange(0, 32, 1)
+                        .setBinding(v -> { c.defaultBlurRadius = v; }, () -> c.defaultBlurRadius))
+                .addOption(builder.createIntegerOption(id("tint_alpha"))
+                        .setStorageHandler(ReGlassSettingsIO::saveFromMemory)
+                        .setName(Component.literal("Tint Alpha"))
+                        .setTooltip(Component.literal("Glass tint opacity, percent"))
+                        .setDefaultValue(Math.round(c.defaultTintAlpha * 100f))
+                        .setRange(0, 100, 1)
+                        .setBinding(v -> { c.defaultTintAlpha = v / 100f; }, () -> Math.round(c.defaultTintAlpha * 100f)));
     }
+
     private OptionGroupBuilder createShadow(ConfigBuilder builder) {
-        ReGlassConfig c=ReGlassConfig.INSTANCE;
+        ReGlassConfig c = ReGlassConfig.INSTANCE;
         return builder.createOptionGroup().setName(Component.literal("Shadow"))
-                .addOption(builder.createIntegerOption(id("shadow_factor")).setName(Component.literal("Shadow Factor"))
-                        .setTooltip(Component.literal("Shadow opacity, percent")).setDefaultValue(Math.round(c.defaultShadowFactor*100f)).setRange(0,100,1)
-                        .setBinding(v->{c.defaultShadowFactor=v/100f;save();},()->Math.round(c.defaultShadowFactor*100f)))
-                .addOption(builder.createIntegerOption(id("shadow_expand")).setName(Component.literal("Shadow Expand"))
-                        .setTooltip(Component.literal("Shadow spread")).setDefaultValue(Math.round(c.defaultShadowExpand)).setRange(0,100,1)
-                        .setBinding(v->{c.defaultShadowExpand=v;save();},()->Math.round(c.defaultShadowExpand)));
+                .addOption(builder.createIntegerOption(id("shadow_factor"))
+                        .setStorageHandler(ReGlassSettingsIO::saveFromMemory)
+                        .setName(Component.literal("Shadow Factor"))
+                        .setTooltip(Component.literal("Shadow opacity, percent"))
+                        .setDefaultValue(Math.round(c.defaultShadowFactor * 100f))
+                        .setRange(0, 100, 1)
+                        .setBinding(v -> { c.defaultShadowFactor = v / 100f; }, () -> Math.round(c.defaultShadowFactor * 100f)))
+                .addOption(builder.createIntegerOption(id("shadow_expand"))
+                        .setStorageHandler(ReGlassSettingsIO::saveFromMemory)
+                        .setName(Component.literal("Shadow Expand"))
+                        .setTooltip(Component.literal("Shadow spread"))
+                        .setDefaultValue(Math.round(c.defaultShadowExpand))
+                        .setRange(0, 100, 1)
+                        .setBinding(v -> { c.defaultShadowExpand = v; }, () -> Math.round(c.defaultShadowExpand)));
     }
-    private static ResourceLocation id(String path){return ResourceLocation.fromNamespaceAndPath("reglass",path);}
-    private static void save(){ReGlassSettingsIO.saveFromMemory();}
+
+    private static ResourceLocation id(String path) {
+        return ResourceLocation.fromNamespaceAndPath("reglass", path);
+    }
 }
