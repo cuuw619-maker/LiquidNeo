@@ -1,6 +1,5 @@
 package restudio.reglassneo.client.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -114,9 +113,12 @@ public final class LiquidGlassRenderer {
             backgroundTarget.setFilterMode(GL30.GL_LINEAR);
         }
 
+        // RenderTarget.copyDepthFrom() is intentionally not used: the glass only
+        // needs the already-rendered color buffer. blitToScreen() is also avoided
+        // because it would draw to the screen instead of copying into our target.
         main.bindRead();
         backgroundTarget.bindWrite(false);
-        GlStateManager._glBlitFrameBuffer(
+        RenderSystem.blitFrameBuffer(
                 0, 0, width, height,
                 0, 0, width, height,
                 GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST
