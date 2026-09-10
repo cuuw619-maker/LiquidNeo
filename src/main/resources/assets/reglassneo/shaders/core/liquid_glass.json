@@ -1,7 +1,7 @@
 {
   "vertex": "reglassneo:position_tex",
   "fragment": "reglassneo:liquid_glass",
-  "samplers": [],
+  "samplers": ["Sampler0"],
   "uniforms": [
     {"name":"ScreenSize","type":"float","count":2,"values":[1.0,1.0]},
     {"name":"Rect","type":"float","count":4,"values":[0.0,0.0,1.0,1.0]},

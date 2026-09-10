@@ -1,5 +1,8 @@
 package restudio.reglassneo.client.render;
 
+import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -10,6 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import org.lwjgl.opengl.GL30;
 import restudio.reglassneo.client.LiquidGlassPipelines;
 import restudio.reglassneo.client.LiquidGlassUniforms;
 import restudio.reglassneo.client.api.WidgetStyle;
@@ -17,6 +21,9 @@ import restudio.reglassneo.client.api.WidgetStyle;
 public final class LiquidGlassRenderer {
     private LiquidGlassRenderer() {}
 
+    private static TextureTarget backgroundTarget;
+    private static int backgroundWidth = -1;
+    private static int backgroundHeight = -1;
     private static float cachedTime;
 
     public static void registerShaders(RegisterShadersEvent event) {
@@ -35,7 +42,6 @@ public final class LiquidGlassRenderer {
                               float radius, WidgetStyle style, float hover, float focus,
                               net.minecraft.network.chat.Component text) {
         if (width <= 0 || height <= 0 || !LiquidGlassPipelines.ready()) return;
-
         renderInternal(graphics, x, y, width, height, radius, -1.0f, style, hover, focus);
         if (text != null && !text.getString().isEmpty()) {
             graphics.drawCenteredString(Minecraft.getInstance().font, text,
@@ -45,9 +51,16 @@ public final class LiquidGlassRenderer {
 
     public static void renderCapsule(GuiGraphics graphics, int x, int y, int width, int height,
                                      float progress, WidgetStyle style) {
+        renderCapsule(graphics, x, y, width, height, progress, style,
+                Math.min(width, height) * 0.5f, 0.0f, 0.0f);
+    }
+
+    public static void renderCapsule(GuiGraphics graphics, int x, int y, int width, int height,
+                                     float progress, WidgetStyle style, float radius,
+                                     float hover, float focus) {
         if (width <= 0 || height <= 0 || !LiquidGlassPipelines.ready()) return;
         renderInternal(graphics, x, y, width, height,
-                Math.min(width, height) * 0.5f, progress, style, 0.0f, 0.0f);
+                Math.min(radius, Math.min(width, height) * 0.5f), progress, style, hover, focus);
     }
 
     private static void renderInternal(GuiGraphics graphics, int x, int y, int width, int height,
@@ -67,11 +80,13 @@ public final class LiquidGlassRenderer {
         int sh = mc.getMainRenderTarget().height;
 
         graphics.flush();
+        captureBackground(mc, sw, sh);
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
         RenderSystem.setShader(() -> LiquidGlassPipelines.glassShader());
+        RenderSystem.setShaderTexture(0, backgroundTarget.getColorTextureId());
 
         updateTimeCache();
         LiquidGlassUniforms.get().applyWidget(
@@ -85,7 +100,28 @@ public final class LiquidGlassRenderer {
         graphics.flush();
         RenderSystem.disableBlend();
         RenderSystem.enableDepthTest();
+        mc.getMainRenderTarget().bindWrite(false);
         graphics.flush();
+    }
+
+    private static void captureBackground(Minecraft mc, int width, int height) {
+        RenderTarget main = mc.getMainRenderTarget();
+        if (backgroundTarget == null || backgroundWidth != width || backgroundHeight != height) {
+            if (backgroundTarget != null) backgroundTarget.destroyBuffers();
+            backgroundTarget = new TextureTarget(width, height, false, Minecraft.ON_OSX);
+            backgroundWidth = width;
+            backgroundHeight = height;
+            backgroundTarget.setFilterMode(GL30.GL_LINEAR);
+        }
+
+        main.bindRead();
+        backgroundTarget.bindWrite(false);
+        GlStateManager._glBlitFrameBuffer(
+                0, 0, width, height,
+                0, 0, width, height,
+                GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST
+        );
+        main.bindWrite(false);
     }
 
     private static void drawQuad(int x, int y, int width, int height) {
