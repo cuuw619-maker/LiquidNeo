@@ -1,0 +1,9 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "restudio.reglass.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "client.LoadingOverlayMixin"
+  ]
+}
