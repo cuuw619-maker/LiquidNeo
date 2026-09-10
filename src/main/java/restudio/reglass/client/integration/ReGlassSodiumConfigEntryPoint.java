@@ -1,0 +1,68 @@
+package restudio.reglass.client.integration;
+
+import net.caffeinemc.mods.sodium.api.config.ConfigEntryPoint;
+import net.caffeinemc.mods.sodium.api.config.structure.ConfigBuilder;
+import net.caffeinemc.mods.sodium.api.config.structure.OptionGroupBuilder;
+import net.caffeinemc.mods.sodium.api.config.structure.OptionPageBuilder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.fml.ModList;
+import restudio.reglass.ReGlass;
+import restudio.reglass.client.api.ReGlassConfig;
+import restudio.reglass.client.config.ReGlassSettingsIO;
+
+public final class ReGlassSodiumConfigEntryPoint implements ConfigEntryPoint {
+    @Override
+    public void registerConfigLate(ConfigBuilder builder) {
+        if (!ModList.get().isLoaded("reeses-sodium-options")) {
+            return;
+        }
+        ReGlass.LOGGER.info("ReGlass detected Reese's Sodium Options; registering Liquid Glass settings");
+        builder.registerOwnModOptions()
+                .addPage(createPage(builder));
+    }
+
+    private OptionPageBuilder createPage(ConfigBuilder builder) {
+        return builder.createOptionPage()
+                .setName(Component.literal("Liquid Glass"))
+                .addOptionGroup(createAppearance(builder))
+                .addOptionGroup(createShadow(builder));
+    }
+
+    private OptionGroupBuilder createAppearance(ConfigBuilder builder) {
+        ReGlassConfig c=ReGlassConfig.INSTANCE;
+        return builder.createOptionGroup().setName(Component.literal("Appearance"))
+                .addOption(builder.createIntegerOption(id("blur_radius"))
+                        .setName(Component.literal("Blur Radius"))
+                        .setTooltip(Component.literal("Liquid Glass blur radius"))
+                        .setDefaultValue(c.defaultBlurRadius)
+                        .setRange(0,32,1)
+                        .setBinding(v->{c.defaultBlurRadius=v;save();},()->c.defaultBlurRadius))
+                .addOption(builder.createFloatOption(id("tint_alpha"))
+                        .setName(Component.literal("Tint Alpha"))
+                        .setTooltip(Component.literal("Glass tint opacity"))
+                        .setDefaultValue(c.defaultTintAlpha)
+                        .setRange(0f,1f,0.01f)
+                        .setBinding(v->{c.defaultTintAlpha=v;save();},()->c.defaultTintAlpha));
+    }
+
+    private OptionGroupBuilder createShadow(ConfigBuilder builder) {
+        ReGlassConfig c=ReGlassConfig.INSTANCE;
+        return builder.createOptionGroup().setName(Component.literal("Shadow"))
+                .addOption(builder.createFloatOption(id("shadow_factor"))
+                        .setName(Component.literal("Shadow Factor"))
+                        .setTooltip(Component.literal("Shadow opacity"))
+                        .setDefaultValue(c.defaultShadowFactor)
+                        .setRange(0f,1f,0.01f)
+                        .setBinding(v->{c.defaultShadowFactor=v;save();},()->c.defaultShadowFactor))
+                .addOption(builder.createFloatOption(id("shadow_expand"))
+                        .setName(Component.literal("Shadow Expand"))
+                        .setTooltip(Component.literal("Shadow spread"))
+                        .setDefaultValue(c.defaultShadowExpand)
+                        .setRange(0f,100f,1f)
+                        .setBinding(v->{c.defaultShadowExpand=v;save();},()->c.defaultShadowExpand));
+    }
+
+    private static ResourceLocation id(String path) { return ResourceLocation.fromNamespaceAndPath("reglass",path); }
+    private static void save() { ReGlassSettingsIO.saveFromMemory(); }
+}
