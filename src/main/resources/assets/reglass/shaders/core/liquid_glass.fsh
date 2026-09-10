@@ -52,23 +52,35 @@ void main() {
     float aa = max(fwidth(d), 0.75);
     float inside = 1.0 - smoothstep(-aa, aa, d);
 
+    // Layer 1: soft volumetric shadow behind the capsule.
+    float shadowExpand = max(Shadow.x, 0.001);
+    vec2 shadowLocal = local - Shadow.zw;
+    float sd = roundedBox(shadowLocal, halfSize, radius);
+    float shadowAlpha = exp(-max(sd, 0.0) / shadowExpand) * Shadow.y * ShadowColor.a;
+    float shadowOnly = (1.0 - inside) * shadowAlpha;
+
     vec4 scene = texture(SceneSampler, texCoord);
+    vec3 composited = mix(scene.rgb, ShadowColor.rgb, clamp(shadowOnly, 0.0, 1.0));
+
+    // Layer 2: two-pass blurred background, sampled only through the SDF capsule.
     vec2 normal = normalize(local / max(halfSize, vec2(0.001)));
     float edge = exp(-max(-d, 0.0) / max(Refraction.x, 0.001));
     float refractive = clamp(Refraction.y, 0.0, 4.0);
     float offsetAmount = edge * refractive * 0.012;
     vec2 uvOffset = normal * offsetAmount * vec2(ScreenSize.y / max(ScreenSize.x, 1.0), 1.0);
-
     vec3 refracted = sampleChromatic(texCoord, uvOffset, Refraction.z);
+
+    // Layer 3: glass tint + Fresnel response.
     float fres = pow(clamp(1.0 - max(dot(normal, vec2(0.707, 0.707)), 0.0), 0.0, 1.0), 2.0);
     fres *= clamp(Fresnel.y / 100.0, 0.0, 2.0);
-
     vec3 color = mix(refracted, Tint.rgb, clamp(Tint.a, 0.0, 1.0));
     color = mix(color, vec3(1.0), fres * clamp(Fresnel.x / 100.0, 0.0, 1.0));
 
+    // Layer 4: animated inner glossy highlight. Time is intentionally used so
+    // the driver keeps the uniform active instead of optimizing it away.
+    float animatedAngle = Glare.w + sin(Time * 0.45) * 0.035;
+    vec2 lightDir = vec2(cos(animatedAngle), sin(animatedAngle));
     float glare = pow(max(0.0, 1.0 - abs(d) / max(Glare.x, 0.001)), max(0.5, Glare.y / 20.0));
-    float angle = Glare.w;
-    vec2 lightDir = vec2(cos(angle), sin(angle));
     glare *= pow(max(dot(normal, lightDir), 0.0), 2.0);
     color += vec3(glare) * clamp(Glare.z / 100.0, 0.0, 1.0) * 0.35;
 
@@ -83,13 +95,6 @@ void main() {
         color = mix(color, ProgressColor.rgb, fillMask * ProgressColor.a);
     }
 
-    float shadowExpand = max(Shadow.x, 0.001);
-    vec2 shadowLocal = local - Shadow.zw;
-    float sd = roundedBox(shadowLocal, halfSize, radius);
-    float shadowAlpha = exp(-max(sd, 0.0) / shadowExpand) * Shadow.y * ShadowColor.a;
-    float shadowOnly = (1.0 - inside) * shadowAlpha;
-    vec3 composited = mix(scene.rgb, ShadowColor.rgb, clamp(shadowOnly, 0.0, 1.0));
     composited = mix(composited, color, inside);
-
     fragColor = vec4(composited, 1.0);
 }
