@@ -50,7 +50,7 @@ side="CLIENT"
 mandatory=false
 
 [modproperties.${mod_id}]
-"sodium:config_api_user"="restudio.reglass.client.integration.ReGlassSodiumConfigEntryPoint"
+"sodium:config_api_user"="restudio.reglassneo.client.integration.ReGlassSodiumConfigEntryPoint"
 
 [[mixins]]
-config="reglass.mixins.json"
+config="reglassneo.mixins.json"
