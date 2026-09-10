@@ -12,6 +12,14 @@ import restudio.reglassneo.client.render.LiquidGlassRenderer;
 
 @Mixin(AbstractWidget.class)
 public abstract class AbstractWidgetMixin {
+    // These declarations are supplied by AbstractWidget at runtime by Mixin.
+    // Declaring them here lets the mixin source compile while preserving direct
+    // this.getX()/getY()/getWidth()/getHeight() calls in the overwritten method.
+    public abstract int getX();
+    public abstract int getY();
+    public abstract int getWidth();
+    public abstract int getHeight();
+
     @Overwrite
     protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (!((Object) this instanceof Button button)) return;
@@ -30,8 +38,6 @@ public abstract class AbstractWidgetMixin {
                 .glareFactor(config.defaultGlareFactor)
                 .smoothing(Math.max(0.02f, config.defaultSmoothing));
 
-        // Use the widget's own coordinates directly so the shader receives the exact
-        // geometry Minecraft is rendering, without an intermediate offset or cache.
         LiquidGlassRenderer.renderCapsule(
                 graphics,
                 this.getX(),
