@@ -6,12 +6,18 @@ import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
+import org.spongepowered.asm.mixin.Shadow;
 import restudio.reglassneo.client.api.ReGlassConfig;
 import restudio.reglassneo.client.api.WidgetStyle;
 import restudio.reglassneo.client.render.LiquidGlassRenderer;
 
 @Mixin(AbstractWidget.class)
 public abstract class AbstractWidgetMixin {
+    @Shadow private int x;
+    @Shadow private int y;
+    @Shadow protected int width;
+    @Shadow protected int height;
+
     @Overwrite
     protected void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         if (!((Object) this instanceof Button button)) return;
@@ -32,10 +38,10 @@ public abstract class AbstractWidgetMixin {
 
         LiquidGlassRenderer.renderCapsule(
                 graphics,
-                button.x,
-                button.y,
-                button.width,
-                button.height,
+                x,
+                y,
+                width,
+                height,
                 -1.0f,
                 style
         );
@@ -44,8 +50,8 @@ public abstract class AbstractWidgetMixin {
             graphics.drawCenteredString(
                     Minecraft.getInstance().font,
                     button.getMessage(),
-                    button.x + button.width / 2,
-                    button.y + (button.height - 8) / 2,
+                    x + width / 2,
+                    y + (height - 8) / 2,
                     button.active ? 0xFFFFFFFF : 0xFF8D919A
             );
         }
