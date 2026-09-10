@@ -34,6 +34,7 @@ public final class ReGlassSodiumConfigEntryPoint implements ConfigEntryPoint {
                         .setTooltip(Component.literal("Liquid Glass blur radius"))
                         .setDefaultValue(c.defaultBlurRadius)
                         .setRange(0, 32, 1)
+                        .setValueFormatter(value -> Component.literal(String.valueOf(value)))
                         .setBinding(v -> { c.defaultBlurRadius = v; }, () -> c.defaultBlurRadius))
                 .addOption(builder.createIntegerOption(id("tint_alpha"))
                         .setStorageHandler(ReGlassSettingsIO::saveFromMemory)
@@ -41,6 +42,7 @@ public final class ReGlassSodiumConfigEntryPoint implements ConfigEntryPoint {
                         .setTooltip(Component.literal("Glass tint opacity, percent"))
                         .setDefaultValue(Math.round(c.defaultTintAlpha * 100f))
                         .setRange(0, 100, 1)
+                        .setValueFormatter(value -> Component.literal(String.valueOf(value) + "%"))
                         .setBinding(v -> { c.defaultTintAlpha = v / 100f; }, () -> Math.round(c.defaultTintAlpha * 100f)));
     }
 
@@ -53,6 +55,7 @@ public final class ReGlassSodiumConfigEntryPoint implements ConfigEntryPoint {
                         .setTooltip(Component.literal("Shadow opacity, percent"))
                         .setDefaultValue(Math.round(c.defaultShadowFactor * 100f))
                         .setRange(0, 100, 1)
+                        .setValueFormatter(value -> Component.literal(String.valueOf(value) + "%"))
                         .setBinding(v -> { c.defaultShadowFactor = v / 100f; }, () -> Math.round(c.defaultShadowFactor * 100f)))
                 .addOption(builder.createIntegerOption(id("shadow_expand"))
                         .setStorageHandler(ReGlassSettingsIO::saveFromMemory)
@@ -60,6 +63,7 @@ public final class ReGlassSodiumConfigEntryPoint implements ConfigEntryPoint {
                         .setTooltip(Component.literal("Shadow spread"))
                         .setDefaultValue(Math.round(c.defaultShadowExpand))
                         .setRange(0, 100, 1)
+                        .setValueFormatter(value -> Component.literal(String.valueOf(value)))
                         .setBinding(v -> { c.defaultShadowExpand = v; }, () -> Math.round(c.defaultShadowExpand)));
     }
 

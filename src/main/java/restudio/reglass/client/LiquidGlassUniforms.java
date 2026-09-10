@@ -14,9 +14,12 @@ public final class LiquidGlassUniforms {
         return INSTANCE;
     }
 
+    public void updateTime(ShaderInstance shader) {
+        setFloat(shader, "Time", (float) (System.nanoTime() / 1_000_000_000.0));
+    }
+
     public void applyCommon(ShaderInstance shader, int screenWidth, int screenHeight) {
         setVec2(shader, "ScreenSize", screenWidth, screenHeight);
-        setFloat(shader, "Time", (float) (System.nanoTime() / 1_000_000_000.0));
     }
 
     public void applyBlur(ShaderInstance shader, int width, int height, float radius, float dx, float dy) {

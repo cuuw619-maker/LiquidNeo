@@ -67,6 +67,7 @@ public final class LiquidGlassRenderer {
         RenderSystem.setShaderTexture(0, sceneCopy.getColorTextureId());
         RenderSystem.setShaderTexture(1, blurB.getColorTextureId());
 
+        LiquidGlassUniforms.get().updateTime(shader);
         LiquidGlassUniforms.get().applyWidget(shader, main.width, main.height, px, py, pw, ph, pr, style, hover, focus);
         drawQuad(px, main.height - py - ph, pw, ph);
 
@@ -102,6 +103,8 @@ public final class LiquidGlassRenderer {
         RenderSystem.setShaderTexture(0, sceneCopy.getColorTextureId());
         RenderSystem.setShaderTexture(1, blurB.getColorTextureId());
 
+        // Keep the glass shader's animated highlight synchronized for every capsule draw.
+        LiquidGlassUniforms.get().updateTime(shader);
         LiquidGlassUniforms.get().applyCapsule(shader, main.width, main.height, px, py, pw, ph, progress, style);
         drawQuad(px, main.height - py - ph, pw, ph);
 
