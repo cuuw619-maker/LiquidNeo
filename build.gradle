@@ -32,6 +32,14 @@ repositories {
         name = 'Modrinth'
         url = 'https://api.modrinth.com/maven'
     }
+    maven {
+        name = 'Architectury'
+        url = 'https://maven.architectury.dev'
+    }
+    maven {
+        name = 'CaffeineMC'
+        url = 'https://maven.caffeinemc.net/releases'
+    }
 }
 
 neoForge {
@@ -62,10 +70,12 @@ neoForge {
 }
 
 dependencies {
-    // Minecraft and NeoForge are provided by ModDev.
-    // Fabric Loader, Fabric API and Yarn are intentionally not used.
-    // Sodium/Reese's will remain optional integrations and will be wired
-    // when the client API/config layer is ported.
+    // Architectury is a hard compile/runtime dependency. NeoForge enforces
+    // the corresponding mandatory dependency in neoforge.mods.toml.
+    implementation "dev.architectury:architectury-neoforge:${project.architectury_version}"
+
+    // Sodium is compile-only: ReGlass must remain runnable without Sodium.
+    compileOnly "maven.modrinth:sodium:${project.sodium_version}"
 }
 
 tasks.withType(JavaCompile).configureEach {
