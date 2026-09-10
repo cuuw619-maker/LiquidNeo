@@ -35,3 +35,6 @@ mandatory=true
 
 [modproperties.${mod_id}]
 "sodium:config_api_user"="restudio.reglass.client.integration.ReGlassSodiumConfigEntryPoint"
+
+[[mixins]]
+config="reglass.mixins.json"
