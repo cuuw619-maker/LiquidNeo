@@ -1,78 +1,180 @@
 package restudio.reglass.client.render;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.BufferUploader;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
+import net.minecraft.client.renderer.ShaderInstance;
+import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import restudio.reglass.client.LiquidGlassPipelines;
+import restudio.reglass.client.LiquidGlassUniforms;
+import restudio.reglass.client.api.ReGlassConfig;
 import restudio.reglass.client.api.WidgetStyle;
 
-/**
- * Immediate-mode Liquid Glass renderer for Minecraft 1.21.1.
- * It uses layered rounded geometry so the public API is usable independently
- * of the original Fabric render-state pipeline.
- */
 public final class LiquidGlassRenderer {
-    private LiquidGlassRenderer() {}
+    private static TextureTarget sceneCopy;
+    private static TextureTarget blurA;
+    private static TextureTarget blurB;
+    private static int targetWidth;
+    private static int targetHeight;
+    private static boolean prepared;
+
+    private LiquidGlassRenderer() {
+    }
+
+    public static void registerShaders(RegisterShadersEvent event) {
+        LiquidGlassPipelines.registerShaders(event);
+    }
+
+    public static void beginFrame() {
+        prepared = false;
+    }
 
     public static void render(GuiGraphics graphics, int x, int y, int width, int height, float radius,
-                              WidgetStyle style, float hover, float focus, Component text) {
-        int r = Math.max(0, Math.min(Math.min(width, height) / 2, Math.round(radius)));
-        int expand = Math.max(0, Math.round(style.getShadowExpand() * Math.max(0f, style.getShadowFactor()) * .18f));
-        int sx = Math.round(style.getShadowOffsetX());
-        int sy = Math.round(style.getShadowOffsetY());
+                              WidgetStyle style, float hover, float focus, net.minecraft.network.chat.Component text) {
+        if (width <= 0 || height <= 0 || !LiquidGlassPipelines.ready()) return;
 
-        int shadowAlpha = alpha(style.getShadowColorAlpha() * style.getShadowFactor());
-        if (shadowAlpha > 0 && expand > 0) {
-            rounded(graphics, x-expand+sx, y-expand+sy, width+expand*2, height+expand*2, r+expand, rgba(style.getShadowColor(), shadowAlpha));
-        }
+        Minecraft minecraft = Minecraft.getInstance();
+        RenderTarget main = minecraft.getMainRenderTarget();
+        ensureTargets(main.width, main.height);
+        prepareBackground(main);
 
-        float scale = 1f + (style.getHoverScalePx() / Math.max(1f, Math.min(width, height))) * hover;
-        int dw = Math.round(width * scale), dh = Math.round(height * scale);
-        int dx = x - (dw-width)/2, dy = y - (dh-height)/2;
-        int base = rgba(style.getTintColor(), Math.max(18, alpha(.22f + style.getTintAlpha()*.55f)));
-        rounded(graphics, dx, dy, dw, dh, Math.min(r,Math.min(dw,dh)/2), base);
+        ShaderInstance shader = LiquidGlassPipelines.glassShader();
+        if (shader == null) return;
 
-        int highlight = alpha(.13f + .12f * hover + .18f * focus);
-        rounded(graphics, dx+1, dy+1, Math.max(1,dw-2), Math.max(1,dh-2), Math.max(0,r-1), rgba(0xFFFFFF, highlight));
-        int inner = alpha(.08f + style.getSmoothing()*2f);
-        rounded(graphics, dx+2, dy+2, Math.max(1,dw-4), Math.max(1,dh-4), Math.max(0,r-2), rgba(style.getTintColor(), inner));
+        float scale = (float) minecraft.getWindow().getGuiScale();
+        int px = Math.round(x * scale);
+        int py = Math.round(y * scale);
+        int pw = Math.max(1, Math.round(width * scale));
+        int ph = Math.max(1, Math.round(height * scale));
+        float pr = radius * scale;
 
-        if (focus > 0f && style.getFocusBorderWidthPx() > 0f) {
-            int border = Math.max(1, Math.round(style.getFocusBorderWidthPx()));
-            int a = alpha(style.getFocusBorderIntensity() * focus);
-            rounded(graphics, dx, dy, dw, border, Math.min(r,border/2), rgba(0xFFFFFF,a));
-            rounded(graphics, dx, dy+dh-border, dw, border, Math.min(r,border/2), rgba(0xFFFFFF,a));
-        }
+        main.bindWrite(false);
+        RenderSystem.viewport(0, 0, main.width, main.height);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableDepthTest();
+        RenderSystem.setShader(() -> shader);
 
+        LiquidGlassUniforms uniforms = LiquidGlassUniforms.get();
+        uniforms.applyWidget(shader, main.width, main.height, px, py, pw, ph, pr, style, hover, focus);
+        LiquidGlassUniforms.bindSampler(shader, "SceneSampler", sceneCopy);
+        LiquidGlassUniforms.bindSampler(shader, "BlurSampler", blurB);
+        drawQuad(px, main.height - py - ph, pw, ph);
+
+        RenderSystem.disableBlend();
+        RenderSystem.enableDepthTest();
         if (text != null && !text.getString().isEmpty()) {
-            int color = 0xFFFFFFFF;
-            int tw = graphics.guiWidth();
-            int tx = dx + dw/2 - 50;
-            graphics.drawCenteredString(net.minecraft.client.Minecraft.getInstance().font, text, dx+dw/2, dy+dh/2-4, color);
+            graphics.drawCenteredString(minecraft.font, text, x + width / 2, y + height / 2 - 4, 0xFFFFFFFF);
         }
     }
 
     public static void renderCapsule(GuiGraphics graphics, int x, int y, int width, int height, float progress, WidgetStyle style) {
-        progress=Math.max(0f,Math.min(1f,progress));
-        int radius=Math.min(width,height)/2;
-        render(graphics,x,y,width,height,radius,style,0f,0f,null);
-        int innerX=x+2, innerY=y+2, innerW=Math.max(0,width-4), innerH=Math.max(0,height-4);
-        int fillW=Math.round(innerW*progress);
-        if(fillW>0) rounded(graphics,innerX,innerY,fillW,innerH,Math.min(radius-2,fillW/2),rgba(0xFFFFFF,190));
+        if (width <= 0 || height <= 0 || !LiquidGlassPipelines.ready()) return;
+
+        Minecraft minecraft = Minecraft.getInstance();
+        RenderTarget main = minecraft.getMainRenderTarget();
+        ensureTargets(main.width, main.height);
+        prepareBackground(main);
+
+        ShaderInstance shader = LiquidGlassPipelines.glassShader();
+        if (shader == null) return;
+        float scale = (float) minecraft.getWindow().getGuiScale();
+        int px = Math.round(x * scale);
+        int py = Math.round(y * scale);
+        int pw = Math.max(1, Math.round(width * scale));
+        int ph = Math.max(1, Math.round(height * scale));
+
+        main.bindWrite(false);
+        RenderSystem.viewport(0, 0, main.width, main.height);
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableDepthTest();
+        RenderSystem.setShader(() -> shader);
+
+        LiquidGlassUniforms.get().applyCapsule(shader, main.width, main.height, px, py, pw, ph, progress, style);
+        LiquidGlassUniforms.bindSampler(shader, "SceneSampler", sceneCopy);
+        LiquidGlassUniforms.bindSampler(shader, "BlurSampler", blurB);
+        drawQuad(px, main.height - py - ph, pw, ph);
+
+        RenderSystem.disableBlend();
+        RenderSystem.enableDepthTest();
     }
 
-    private static int alpha(float value) { return Math.max(0,Math.min(255,Math.round(value*255f))); }
-    private static int rgba(int rgb,int a) { return (a<<24)|(rgb&0xFFFFFF); }
+    private static void prepareBackground(RenderTarget main) {
+        if (prepared) return;
+        prepared = true;
+        ensureTargets(main.width, main.height);
 
-    private static void rounded(GuiGraphics g,int x,int y,int w,int h,int radius,int color) {
-        if(w<=0||h<=0)return;
-        radius=Math.min(radius,Math.min(w,h)/2);
-        if(radius<=0){g.fill(x,y,x+w,y+h,color);return;}
-        g.fill(x+radius,y,x+w-radius,y+h,color);
-        g.fill(x,y+radius,x+w,y+h-radius,color);
-        for(int i=0;i<radius;i++){
-            double dy=radius-i-.5;
-            int dx=(int)Math.ceil(radius-Math.sqrt(Math.max(0,radius*radius-dy*dy)));
-            g.fill(x+dx,y+i,x+w-dx,y+i+1,color);
-            g.fill(x+dx,y+h-i-1,x+w-dx,y+h-i,color);
-        }
+        ShaderInstance copy = LiquidGlassPipelines.copyShader();
+        ShaderInstance blur = LiquidGlassPipelines.blurShader();
+        if (copy == null || blur == null) return;
+
+        sceneCopy.bindWrite(true);
+        RenderSystem.viewport(0, 0, main.width, main.height);
+        RenderSystem.disableDepthTest();
+        RenderSystem.disableBlend();
+        RenderSystem.setShader(() -> copy);
+        LiquidGlassUniforms.get().applyCommon(copy, main.width, main.height);
+        LiquidGlassUniforms.bindSampler(copy, "SceneSampler", main);
+        drawQuad(0, 0, main.width, main.height);
+
+        blurA.bindWrite(true);
+        RenderSystem.viewport(0, 0, main.width, main.height);
+        RenderSystem.setShader(() -> blur);
+        LiquidGlassUniforms.get().applyBlur(blur, main.width, main.height, ReGlassConfig.INSTANCE.defaultBlurRadius, 1.0f, 0.0f);
+        LiquidGlassUniforms.bindSampler(blur, "DiffuseSampler", sceneCopy);
+        drawQuad(0, 0, main.width, main.height);
+
+        blurB.bindWrite(true);
+        RenderSystem.viewport(0, 0, main.width, main.height);
+        RenderSystem.setShader(() -> blur);
+        LiquidGlassUniforms.get().applyBlur(blur, main.width, main.height, ReGlassConfig.INSTANCE.defaultBlurRadius, 0.0f, 1.0f);
+        LiquidGlassUniforms.bindSampler(blur, "DiffuseSampler", blurA);
+        drawQuad(0, 0, main.width, main.height);
+
+        main.bindWrite(false);
+        RenderSystem.viewport(0, 0, main.width, main.height);
+        RenderSystem.enableDepthTest();
+    }
+
+    private static void ensureTargets(int width, int height) {
+        if (width <= 0 || height <= 0) return;
+        if (sceneCopy != null && width == targetWidth && height == targetHeight) return;
+        destroyTargets();
+        sceneCopy = new TextureTarget(width, height, false, Minecraft.ON_OSX);
+        blurA = new TextureTarget(width, height, false, Minecraft.ON_OSX);
+        blurB = new TextureTarget(width, height, false, Minecraft.ON_OSX);
+        sceneCopy.setFilterMode(9729);
+        blurA.setFilterMode(9729);
+        blurB.setFilterMode(9729);
+        targetWidth = width;
+        targetHeight = height;
+    }
+
+    private static void destroyTargets() {
+        if (sceneCopy != null) sceneCopy.destroyBuffers();
+        if (blurA != null) blurA.destroyBuffers();
+        if (blurB != null) blurB.destroyBuffers();
+        sceneCopy = null;
+        blurA = null;
+        blurB = null;
+        targetWidth = 0;
+        targetHeight = 0;
+    }
+
+    private static void drawQuad(int x, int y, int width, int height) {
+        BufferBuilder builder = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
+        builder.addVertex(x, y, 0.0f).setUv(0.0f, 0.0f);
+        builder.addVertex(x + width, y, 0.0f).setUv(1.0f, 0.0f);
+        builder.addVertex(x + width, y + height, 0.0f).setUv(1.0f, 1.0f);
+        builder.addVertex(x, y + height, 0.0f).setUv(0.0f, 1.0f);
+        BufferUploader.drawWithShader(builder.buildOrThrow());
     }
 }
