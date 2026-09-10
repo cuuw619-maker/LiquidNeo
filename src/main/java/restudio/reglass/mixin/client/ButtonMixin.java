@@ -32,21 +32,24 @@ public abstract class ButtonMixin {
         float pulse = 0.92f + hover * 0.08f;
 
         WidgetStyle style = WidgetStyle.create()
-                .tint(0xFFFFFF, config.defaultTintAlpha * enabled)
-                .blurRadius(Math.max(12.0f, config.defaultBlurRadius + 8.0f))
+                .tint(config.defaultTintColor, config.defaultTintAlpha * enabled)
+                .blurRadius(Math.max(12, config.defaultBlurRadius + 8))
                 .shadow(config.defaultShadowExpand + 8.0f,
                         Math.min(1.0f, config.defaultShadowFactor + 0.10f),
                         config.defaultShadowOffsetX,
                         config.defaultShadowOffsetY + 1.0f)
                 .shadowColor(config.defaultShadowColor, config.defaultShadowColorAlpha)
-                .refraction(config.defaultRefThickness, config.defaultRefFactor * pulse,
-                        config.defaultRefDispersion, config.defaultRefFresnelRange)
-                .fresnel(config.defaultRefFresnelHardness,
-                        config.defaultRefFresnelFactor * pulse,
-                        config.defaultRefFresnelRange)
-                .glare(config.defaultGlareRange, config.defaultGlareHardness,
-                        config.defaultGlareFactor * pulse, config.defaultGlareAngleRad)
-                .smoothing(0.08f);
+                .refractionThickness(config.defaultRefThickness)
+                .refractionFactor(config.defaultRefFactor * pulse)
+                .refractionDispersion(config.defaultRefDispersion)
+                .fresnelRange(config.defaultRefFresnelRange)
+                .fresnelHardness(config.defaultRefFresnelHardness)
+                .fresnelFactor(config.defaultRefFresnelFactor * pulse)
+                .glareRange(config.defaultGlareRange)
+                .glareHardness(config.defaultGlareHardness)
+                .glareFactor(config.defaultGlareFactor * pulse)
+                .glareAngleRad(config.defaultGlareAngleRad)
+                .smoothing(Math.max(0.02f, config.defaultSmoothing));
 
         LiquidGlassRenderer.renderCapsule(
                 graphics,
@@ -54,7 +57,7 @@ public abstract class ButtonMixin {
                 button.getY(),
                 button.getWidth(),
                 button.getHeight(),
-                hover,
+                0.0f,
                 style
         );
 
