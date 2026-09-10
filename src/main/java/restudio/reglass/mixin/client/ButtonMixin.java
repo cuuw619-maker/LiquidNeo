@@ -1,8 +1,8 @@
 package restudio.reglass.mixin.client;
 
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -12,17 +12,23 @@ import restudio.reglass.client.api.WidgetStyle;
 import restudio.reglass.client.render.LiquidGlassRenderer;
 
 /**
- * Replaces vanilla Button rendering at the widget boundary.
- * Input, focus and narration remain vanilla; only the visual pass is replaced.
+ * Replaces the vanilla visual pass for buttons.
+ *
+ * In Minecraft 1.21.1 (NeoForge/Mojmap), widget rendering is implemented by
+ * AbstractWidget.renderWidget rather than Button.renderWidget. The mixin is
+ * therefore attached to AbstractWidget and restricted to Button instances so
+ * sliders, edit boxes and other widgets keep their normal renderer.
  */
-@Mixin(Button.class)
+@Mixin(AbstractWidget.class)
 public abstract class ButtonMixin {
     @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
     private void reglass$renderLiquidGlass(GuiGraphics graphics, int mouseX, int mouseY,
                                            float partialTick, CallbackInfo ci) {
-        Button button = (Button) (Object) this;
-        ReGlassConfig config = ReGlassConfig.INSTANCE;
+        if (!((Object) this instanceof Button button)) {
+            return;
+        }
 
+        ReGlassConfig config = ReGlassConfig.INSTANCE;
         if (!config.features.enableRedesign || !config.features.buttons) {
             return;
         }
@@ -51,6 +57,9 @@ public abstract class ButtonMixin {
                 .glareAngleRad(config.defaultGlareAngleRad)
                 .smoothing(Math.max(0.02f, config.defaultSmoothing));
 
+        // Use the widget's actual GUI-space bounds. renderCapsule performs the
+        // GUI-scale conversion and maps the blur/refraction/highlight exactly
+        // over this rectangle, producing the volumetric glass capsule.
         LiquidGlassRenderer.renderCapsule(
                 graphics,
                 button.getX(),
@@ -61,18 +70,19 @@ public abstract class ButtonMixin {
                 style
         );
 
-        Component message = button.getMessage();
-        if (!message.getString().isEmpty()) {
+        if (!button.getMessage().getString().isEmpty()) {
             int textColor = button.active ? 0xFFFFFFFF : 0xFF8D919A;
             graphics.drawCenteredString(
                     net.minecraft.client.Minecraft.getInstance().font,
-                    message,
+                    button.getMessage(),
                     button.getX() + button.getWidth() / 2,
                     button.getY() + (button.getHeight() - 8) / 2,
                     textColor
             );
         }
 
+        // Do not allow AbstractWidget's vanilla texture/background renderer to
+        // run after our liquid-glass pass.
         ci.cancel();
     }
 }
