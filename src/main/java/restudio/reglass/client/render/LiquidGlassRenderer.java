@@ -2,6 +2,7 @@ package restudio.reglass.client.render;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.BufferUploader;
@@ -12,6 +13,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30C;
 import restudio.reglass.client.LiquidGlassPipelines;
 import restudio.reglass.client.LiquidGlassUniforms;
 import restudio.reglass.client.api.ReGlassConfig;
@@ -61,11 +64,10 @@ public final class LiquidGlassRenderer {
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
         RenderSystem.setShader(() -> shader);
+        RenderSystem.setShaderTexture(0, sceneCopy.getColorTextureId());
+        RenderSystem.setShaderTexture(1, blurB.getColorTextureId());
 
-        LiquidGlassUniforms uniforms = LiquidGlassUniforms.get();
-        uniforms.applyWidget(shader, main.width, main.height, px, py, pw, ph, pr, style, hover, focus);
-        LiquidGlassUniforms.bindSampler(shader, "SceneSampler", sceneCopy);
-        LiquidGlassUniforms.bindSampler(shader, "BlurSampler", blurB);
+        LiquidGlassUniforms.get().applyWidget(shader, main.width, main.height, px, py, pw, ph, pr, style, hover, focus);
         drawQuad(px, main.height - py - ph, pw, ph);
 
         RenderSystem.disableBlend();
@@ -97,10 +99,10 @@ public final class LiquidGlassRenderer {
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
         RenderSystem.setShader(() -> shader);
+        RenderSystem.setShaderTexture(0, sceneCopy.getColorTextureId());
+        RenderSystem.setShaderTexture(1, blurB.getColorTextureId());
 
         LiquidGlassUniforms.get().applyCapsule(shader, main.width, main.height, px, py, pw, ph, progress, style);
-        LiquidGlassUniforms.bindSampler(shader, "SceneSampler", sceneCopy);
-        LiquidGlassUniforms.bindSampler(shader, "BlurSampler", blurB);
         drawQuad(px, main.height - py - ph, pw, ph);
 
         RenderSystem.disableBlend();
@@ -112,31 +114,32 @@ public final class LiquidGlassRenderer {
         prepared = true;
         ensureTargets(main.width, main.height);
 
-        ShaderInstance copy = LiquidGlassPipelines.copyShader();
         ShaderInstance blur = LiquidGlassPipelines.blurShader();
-        if (copy == null || blur == null) return;
+        if (blur == null) return;
 
-        sceneCopy.bindWrite(true);
-        RenderSystem.viewport(0, 0, main.width, main.height);
-        RenderSystem.disableDepthTest();
-        RenderSystem.disableBlend();
-        RenderSystem.setShader(() -> copy);
-        LiquidGlassUniforms.get().applyCommon(copy, main.width, main.height);
-        LiquidGlassUniforms.bindSampler(copy, "SceneSampler", main);
-        drawQuad(0, 0, main.width, main.height);
+        GlStateManager._glBindFramebuffer(GL30C.GL_READ_FRAMEBUFFER, main.frameBufferId);
+        GlStateManager._glBindFramebuffer(GL30C.GL_DRAW_FRAMEBUFFER, sceneCopy.frameBufferId);
+        GlStateManager._glBlitFrameBuffer(
+                0, 0, main.width, main.height,
+                0, 0, main.width, main.height,
+                GL11.GL_COLOR_BUFFER_BIT, GL11.GL_NEAREST
+        );
+        main.bindWrite(false);
 
         blurA.bindWrite(true);
         RenderSystem.viewport(0, 0, main.width, main.height);
+        RenderSystem.disableDepthTest();
+        RenderSystem.disableBlend();
         RenderSystem.setShader(() -> blur);
         LiquidGlassUniforms.get().applyBlur(blur, main.width, main.height, ReGlassConfig.INSTANCE.defaultBlurRadius, 1.0f, 0.0f);
-        LiquidGlassUniforms.bindSampler(blur, "DiffuseSampler", sceneCopy);
+        RenderSystem.setShaderTexture(0, sceneCopy.getColorTextureId());
         drawQuad(0, 0, main.width, main.height);
 
         blurB.bindWrite(true);
         RenderSystem.viewport(0, 0, main.width, main.height);
         RenderSystem.setShader(() -> blur);
         LiquidGlassUniforms.get().applyBlur(blur, main.width, main.height, ReGlassConfig.INSTANCE.defaultBlurRadius, 0.0f, 1.0f);
-        LiquidGlassUniforms.bindSampler(blur, "DiffuseSampler", blurA);
+        RenderSystem.setShaderTexture(0, blurA.getColorTextureId());
         drawQuad(0, 0, main.width, main.height);
 
         main.bindWrite(false);
@@ -151,9 +154,9 @@ public final class LiquidGlassRenderer {
         sceneCopy = new TextureTarget(width, height, false, Minecraft.ON_OSX);
         blurA = new TextureTarget(width, height, false, Minecraft.ON_OSX);
         blurB = new TextureTarget(width, height, false, Minecraft.ON_OSX);
-        sceneCopy.setFilterMode(9729);
-        blurA.setFilterMode(9729);
-        blurB.setFilterMode(9729);
+        sceneCopy.setFilterMode(GL11.GL_LINEAR);
+        blurA.setFilterMode(GL11.GL_LINEAR);
+        blurB.setFilterMode(GL11.GL_LINEAR);
         targetWidth = width;
         targetHeight = height;
     }
