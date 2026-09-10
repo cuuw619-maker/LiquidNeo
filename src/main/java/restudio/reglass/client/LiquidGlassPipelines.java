@@ -1,9 +1,10 @@
 package restudio.reglass.client;
 
 import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.client.renderer.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import restudio.reglass.ReGlass;
 
 import java.io.IOException;
 
