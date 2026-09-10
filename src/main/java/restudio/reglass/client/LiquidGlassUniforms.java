@@ -1,11 +1,6 @@
 package restudio.reglass.client;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
-import net.minecraft.client.renderer.texture.AbstractTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.client.renderer.RenderTarget;
 import restudio.reglass.client.api.ReGlassConfig;
 import restudio.reglass.client.api.WidgetStyle;
 
@@ -32,9 +27,7 @@ public final class LiquidGlassUniforms {
 
     public void applyWidget(ShaderInstance shader, int width, int height, int x, int y, int widgetWidth,
                             int widgetHeight, float radius, WidgetStyle style, float hover, float focus) {
-        ReGlassConfig c = ReGlassConfig.INSTANCE;
         applyCommon(shader, width, height);
-
         setVec4(shader, "Rect", x, height - y - widgetHeight, widgetWidth, widgetHeight);
         setFloat(shader, "Radius", Math.min(radius, Math.min(widgetWidth, widgetHeight) * 0.5f));
         setColor(shader, "Tint", style.getTintColor(), style.getTintAlpha());
@@ -54,10 +47,6 @@ public final class LiquidGlassUniforms {
                 Math.min(capsuleWidth, capsuleHeight) * 0.5f, style, 0.0f, 0.0f);
         setFloat(shader, "Progress", Math.max(0.0f, Math.min(1.0f, progress)));
         setVec4(shader, "ProgressColor", 1.0f, 1.0f, 1.0f, 0.72f);
-    }
-
-    public static void bindSampler(ShaderInstance shader, String name, RenderTarget target) {
-        shader.setSampler(name, target.getColorTextureId());
     }
 
     private static float clamp(float value) {
