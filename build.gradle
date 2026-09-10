@@ -74,9 +74,8 @@ dependencies {
     // the corresponding mandatory dependency in neoforge.mods.toml.
     implementation "dev.architectury:architectury-neoforge:${project.architectury_version}"
 
-    // Sodium is compile-only. This exposes Sodium's Config API for the
-    // optional Reese's Sodium Options integration without bundling Sodium.
-    compileOnly "net.caffeinemc:sodium-neoforge:${project.sodium_version}"
+    // Sodium's Config API is compile-only. Sodium itself is never bundled.
+    compileOnly "net.caffeinemc:sodium-neoforge-api:${project.sodium_version}"
 }
 
 tasks.withType(JavaCompile).configureEach {
