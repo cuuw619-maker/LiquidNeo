@@ -36,10 +36,6 @@ repositories {
         name = 'Architectury'
         url = 'https://maven.architectury.dev'
     }
-    maven {
-        name = 'CaffeineMC'
-        url = 'https://maven.caffeinemc.net/releases'
-    }
 }
 
 neoForge {
@@ -74,8 +70,8 @@ dependencies {
     // the corresponding mandatory dependency in neoforge.mods.toml.
     implementation "dev.architectury:architectury-neoforge:${project.architectury_version}"
 
-    // Sodium is compile-only: ReGlass must remain runnable without Sodium.
-    compileOnly "maven.modrinth:sodium:${project.sodium_version}"
+    // Sodium integration is not compiled into this build yet. Keeping a
+    // nonexistent Modrinth Maven coordinate here prevents Gradle resolution.
 }
 
 tasks.withType(JavaCompile).configureEach {
