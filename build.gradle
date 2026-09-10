@@ -36,6 +36,10 @@ repositories {
         name = 'Architectury'
         url = 'https://maven.architectury.dev'
     }
+    maven {
+        name = 'CaffeineMC'
+        url = 'https://maven.caffeinemc.net/releases'
+    }
 }
 
 neoForge {
@@ -70,8 +74,9 @@ dependencies {
     // the corresponding mandatory dependency in neoforge.mods.toml.
     implementation "dev.architectury:architectury-neoforge:${project.architectury_version}"
 
-    // Sodium integration is not compiled into this build yet. Keeping a
-    // nonexistent Modrinth Maven coordinate here prevents Gradle resolution.
+    // Sodium is compile-only. This exposes Sodium's Config API for the
+    // optional Reese's Sodium Options integration without bundling Sodium.
+    compileOnly "net.caffeinemc:sodium-neoforge:${project.sodium_version}"
 }
 
 tasks.withType(JavaCompile).configureEach {
