@@ -1,51 +1,20 @@
 package restudio.reglass.client;
 
-import net.minecraft.client.renderer.ShaderInstance;
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import restudio.reglass.ReGlass;
 
-import java.io.IOException;
-
+/**
+ * Legacy shader integration kept as an API compatibility surface.
+ * The active renderer is deliberately shader-free for mobile OpenGL compatibility.
+ */
 public final class LiquidGlassPipelines {
-    private static ShaderInstance copyShader;
-    private static ShaderInstance blurShader;
-    private static ShaderInstance glassShader;
-
-    private LiquidGlassPipelines() {
-    }
+    private LiquidGlassPipelines() {}
 
     public static void registerShaders(RegisterShadersEvent event) {
-        try {
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(ReGlass.MOD_ID, "copy"), DefaultVertexFormat.POSITION_TEX),
-                    shader -> copyShader = shader);
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(ReGlass.MOD_ID, "blur"), DefaultVertexFormat.POSITION_TEX),
-                    shader -> blurShader = shader);
-            event.registerShader(new ShaderInstance(event.getResourceProvider(),
-                    ResourceLocation.fromNamespaceAndPath(ReGlass.MOD_ID, "liquid_glass"), DefaultVertexFormat.POSITION_TEX),
-                    shader -> glassShader = shader);
-            ReGlass.LOGGER.info("Liquid Glass shaders registered for Minecraft 1.21.1");
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to load ReGlass core shaders", exception);
-        }
-    }
-
-    public static ShaderInstance copyShader() {
-        return copyShader;
-    }
-
-    public static ShaderInstance blurShader() {
-        return blurShader;
-    }
-
-    public static ShaderInstance glassShader() {
-        return glassShader;
+        ReGlass.LOGGER.info("ReGlass mobile-safe hardware renderer active; custom core shaders disabled");
     }
 
     public static boolean ready() {
-        return copyShader != null && blurShader != null && glassShader != null;
+        return true;
     }
 }
