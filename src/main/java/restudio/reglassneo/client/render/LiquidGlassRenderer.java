@@ -66,18 +66,13 @@ public final class LiquidGlassRenderer {
         int sw = mc.getMainRenderTarget().width;
         int sh = mc.getMainRenderTarget().height;
 
-        // Finish all pending GuiGraphics batches before changing the active shader/state.
         graphics.flush();
 
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
-
-        // Bind the registered mobile SDF shader explicitly before building the widget quad.
         RenderSystem.setShader(() -> LiquidGlassPipelines.glassShader());
 
-        // Upload every widget uniform immediately before the draw. Time is refreshed every frame
-        // so the inner highlight cannot become a static optimized-away value.
         updateTimeCache();
         LiquidGlassUniforms.get().applyWidget(
                 shader, sw, sh, px, py, pw, ph, radius * scale,
@@ -87,7 +82,6 @@ public final class LiquidGlassRenderer {
         drawQuad(px - shadow, sh - py - ph - shadow,
                 pw + shadow * 2, ph + shadow * 2);
 
-        // Restore a clean GuiGraphics boundary after the custom draw.
         graphics.flush();
         RenderSystem.disableBlend();
         RenderSystem.enableDepthTest();
@@ -95,8 +89,6 @@ public final class LiquidGlassRenderer {
     }
 
     private static void drawQuad(int x, int y, int width, int height) {
-        // Do not select another shader here: renderInternal has already explicitly bound
-        // the registered ReGlassNeo SDF shader and uploaded its uniforms.
         BufferBuilder builder = Tesselator.getInstance().begin(
                 VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX);
         builder.addVertex(x, y, 0.0f).setUv(0.0f, 0.0f);
