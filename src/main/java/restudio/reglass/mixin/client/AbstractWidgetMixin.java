@@ -4,25 +4,27 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.Overwrite;
 import restudio.reglass.client.api.ReGlassConfig;
 import restudio.reglass.client.api.WidgetStyle;
 import restudio.reglass.client.render.LiquidGlassRenderer;
 
 /**
- * Replaces the vanilla visual pass for buttons.
+ * Replaces AbstractWidget's vanilla renderWidget implementation with the
+ * ReGlass renderer for buttons.
  *
- * Minecraft 1.21.1 (NeoForge/Mojmap) implements widget rendering in
- * AbstractWidget.renderWidget. The mixin therefore targets AbstractWidget
- * and is restricted to Button instances.
+ * Minecraft 1.21.1 NeoForge/Mojmap declares renderWidget as a protected
+ * method on AbstractWidget with the signature used below. There is no
+ * callback/ASM injection point and therefore no HEAD cancellation step.
  */
 @Mixin(AbstractWidget.class)
 public abstract class AbstractWidgetMixin {
-    @Inject(method = "renderWidget", at = @At("HEAD"), cancellable = true)
-    private void reglass$renderLiquidGlass(GuiGraphics graphics, int mouseX, int mouseY,
-                                           float partialTick, CallbackInfo ci) {
+    /**
+     * @author ReGlass
+     * @reason Replace the vanilla widget render pass with liquid glass.
+     */
+    @Overwrite
+    protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         if (!((Object) this instanceof Button button)) {
             return;
         }
@@ -56,11 +58,8 @@ public abstract class AbstractWidgetMixin {
                 .glareAngleRad(config.defaultGlareAngleRad)
                 .smoothing(Math.max(0.02f, config.defaultSmoothing));
 
-        // Use the real AbstractWidget bounds in GUI coordinates. The renderer
-        // converts them to framebuffer coordinates and applies blur, refraction
-        // and the inner highlight to the exact capsule geometry.
         LiquidGlassRenderer.renderCapsule(
-                graphics,
+                guiGraphics,
                 button.getX(),
                 button.getY(),
                 button.getWidth(),
@@ -71,7 +70,7 @@ public abstract class AbstractWidgetMixin {
 
         if (!button.getMessage().getString().isEmpty()) {
             int textColor = button.active ? 0xFFFFFFFF : 0xFF8D919A;
-            graphics.drawCenteredString(
+            guiGraphics.drawCenteredString(
                     net.minecraft.client.Minecraft.getInstance().font,
                     button.getMessage(),
                     button.getX() + button.getWidth() / 2,
@@ -79,8 +78,5 @@ public abstract class AbstractWidgetMixin {
                     textColor
             );
         }
-
-        // Suppress the vanilla widget renderer completely.
-        ci.cancel();
     }
 }
