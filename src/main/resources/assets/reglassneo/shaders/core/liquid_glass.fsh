@@ -1,6 +1,8 @@
 #version 150
 
 uniform sampler2D Sampler0;
+uniform sampler2D Sampler1;
+uniform sampler2D Sampler2;
 uniform vec2 ScreenSize;
 uniform vec4 Rect;
 uniform float Radius;
@@ -28,17 +30,23 @@ float aaMask(float d) {
     return 1.0 - smoothstep(-aa, aa, d);
 }
 
+vec3 sampleBlurX(vec2 uv, vec2 texel, float radius) {
+    vec2 r = vec2(texel.x * radius, 0.0);
+    vec3 c = texture(Sampler1, uv).rgb * 0.30;
+    c += texture(Sampler1, uv + r).rgb * 0.20;
+    c += texture(Sampler1, uv - r).rgb * 0.20;
+    c += texture(Sampler1, uv + r * 2.0).rgb * 0.15;
+    c += texture(Sampler1, uv - r * 2.0).rgb * 0.15;
+    return c;
+}
+
 vec3 sampleFrosted(vec2 uv, vec2 texel, float radius) {
-    vec2 r = texel * radius;
-    vec3 c = texture(Sampler0, uv).rgb * 0.20;
-    c += texture(Sampler0, uv + vec2( r.x, 0.0)).rgb * 0.10;
-    c += texture(Sampler0, uv + vec2(-r.x, 0.0)).rgb * 0.10;
-    c += texture(Sampler0, uv + vec2(0.0,  r.y)).rgb * 0.10;
-    c += texture(Sampler0, uv + vec2(0.0, -r.y)).rgb * 0.10;
-    c += texture(Sampler0, uv + vec2( r.x,  r.y)).rgb * 0.10;
-    c += texture(Sampler0, uv + vec2(-r.x,  r.y)).rgb * 0.10;
-    c += texture(Sampler0, uv + vec2( r.x, -r.y)).rgb * 0.10;
-    c += texture(Sampler0, uv + vec2(-r.x, -r.y)).rgb * 0.10;
+    vec3 c = sampleBlurX(uv, texel, radius) * 0.58;
+    vec2 r = vec2(0.0, texel.y * radius);
+    c += texture(Sampler1, uv + r).rgb * 0.105;
+    c += texture(Sampler1, uv - r).rgb * 0.105;
+    c += texture(Sampler1, uv + r * 2.0).rgb * 0.105;
+    c += texture(Sampler1, uv - r * 2.0).rgb * 0.105;
     return c;
 }
 
@@ -58,31 +66,45 @@ void main() {
         * (1.0 - inside) * clamp(Shadow.y, 0.0, 1.0)
         * clamp(ShadowColor.a, 0.0, 1.0);
 
-    vec2 uv = pixel / ScreenSize;
+    vec2 uv = clamp(pixel / ScreenSize, vec2(0.001), vec2(0.999));
     vec2 texel = 1.0 / ScreenSize;
-    float blurRadius = clamp(1.25 + Refraction.y * 1.15, 1.5, 4.5);
+    float blurRadius = clamp(1.35 + Refraction.y * 1.25, 1.5, 4.5);
     vec3 background = sampleFrosted(uv, texel, blurRadius);
+
+    // The frost/refraction layer is clipped by the rounded SDF. The samples may
+    // cross the capsule boundary, but the resulting glass contribution never can.
+    background *= inside;
 
     float edgeDistance = max(-d, 0.0);
     float edgeThickness = max(1.0, Refraction.x * 0.18);
     float edge = 1.0 - smoothstep(0.0, edgeThickness, edgeDistance);
-    vec2 dispersion = vec2(texel.x, texel.y) * Refraction.z * 0.18 * edge;
+    float edgeCurve = 1.0 - smoothstep(0.0, max(1.0, radius), edgeDistance);
+    vec2 normalApprox = normalize(vec2(
+        local.x / max(halfSize.x, 1.0),
+        local.y / max(halfSize.y, 1.0)
+    ) + vec2(0.0001));
+    vec2 distortion = normalApprox * texel * Refraction.z * 1.65 * edge * edgeCurve;
+    distortion += vec2(-normalApprox.y, normalApprox.x) * texel
+        * Refraction.z * 0.42 * edge;
+
     vec3 refracted = vec3(
-        texture(Sampler0, uv + dispersion).r,
-        texture(Sampler0, uv).g,
-        texture(Sampler0, uv - dispersion).b
+        texture(Sampler1, clamp(uv + distortion, vec2(0.001), vec2(0.999))).r,
+        texture(Sampler1, uv).g,
+        texture(Sampler1, clamp(uv - distortion, vec2(0.001), vec2(0.999))).b
     );
-    background = mix(background, refracted, clamp(Refraction.z * 0.035 * edge, 0.0, 0.32));
+    background = mix(background, refracted, clamp(0.16 + Refraction.z * 0.032, 0.0, 0.42) * edge);
 
     float fresnel = pow(clamp(edge, 0.0, 1.0), max(0.5, Fresnel.x * 0.08));
     fresnel *= clamp(Fresnel.y * 0.035, 0.0, 1.0);
 
+    // Apple-like volumetric depth: a soft inner rim plus a brighter upper lip.
+    float innerDepth = 1.0 - smoothstep(0.0, max(1.0, min(halfSize.x, halfSize.y) * 0.55), edgeDistance);
+    float rim = smoothstep(0.0, max(1.0, Refraction.x * 0.22), edgeDistance)
+        * (1.0 - smoothstep(max(1.0, Refraction.x * 0.22), max(2.0, Refraction.x * 0.60), edgeDistance));
     vec3 body = mix(background, Tint.rgb, clamp(Tint.a * 0.72, 0.0, 0.78));
     float bodyAlpha = max(0.18, clamp(Tint.a + 0.08, 0.0, 0.92));
-    body += vec3(fresnel * 0.24);
-
-    float depth = 1.0 - smoothstep(0.0, max(1.0, min(halfSize.x, halfSize.y)), edgeDistance);
-    body *= 0.90 + depth * 0.10;
+    body += vec3(fresnel * 0.24 + rim * 0.08);
+    body *= 0.88 + innerDepth * 0.12;
 
     float topDistance = halfSize.y - local.y;
     float highlightWidth = max(1.0, radius * 0.22 + Glare.x * 0.08);
@@ -94,7 +116,7 @@ void main() {
 
     float hover = clamp(HoverFocus.x, 0.0, 1.0);
     float focus = clamp(HoverFocus.y, 0.0, 1.0);
-    body += vec3(0.04 + hover * 0.10) * edge;
+    body += vec3(0.035 + hover * 0.10) * edge;
     body += vec3(focus * 0.16) * (1.0 - smoothstep(0.0, 2.0, abs(d)));
 
     if (Progress >= 0.0) {

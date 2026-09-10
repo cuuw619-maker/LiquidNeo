@@ -1,4 +1,143 @@
 package restudio.reglassneo.client.runtime;
 
 import restudio.reglassneo.client.api.ReGlassConfig;
-public final class ReGlassAnim {public static final ReGlassAnim INSTANCE=new ReGlassAnim();private boolean initialized;private float tintAlpha,smoothing,blurRadius,shadowExpand,shadowFactor,shadowOffsetX,shadowOffsetY,refThickness,refFactor,refDispersion,refFresnelRange,refFresnelHardness,refFresnelFactor,glareRange,glareHardness,glareConvergence,glareOppositeFactor,glareFactor,glareAngleRad,debugStep,pixelatedGridSize,hoverScalePx,focusScalePx,focusBorderWidthPx,focusBorderIntensity,focusBorderSpeed;private ReGlassAnim(){}public void update(ReGlassConfig c,double dt){float a=dt<=0?0:(float)(1-Math.exp(-dt/.15));if(!initialized){tintAlpha=c.defaultTintAlpha;smoothing=c.defaultSmoothing;blurRadius=c.defaultBlurRadius;shadowExpand=c.defaultShadowExpand;shadowFactor=c.defaultShadowFactor;shadowOffsetX=c.defaultShadowOffsetX;shadowOffsetY=c.defaultShadowOffsetY;refThickness=c.defaultRefThickness;refFactor=c.defaultRefFactor;refDispersion=c.defaultRefDispersion;refFresnelRange=c.defaultRefFresnelRange;refFresnelHardness=c.defaultRefFresnelHardness;refFresnelFactor=c.defaultRefFresnelFactor;glareRange=c.defaultGlareRange;glareHardness=c.defaultGlareHardness;glareConvergence=c.defaultGlareConvergence;glareOppositeFactor=c.defaultGlareOppositeFactor;glareFactor=c.defaultGlareFactor;glareAngleRad=c.defaultGlareAngleRad;debugStep=c.debugStep;pixelatedGridSize=c.pixelatedGridSize;hoverScalePx=c.hoverScalePx;focusScalePx=c.focusScalePx;focusBorderWidthPx=c.focusBorderWidthPx;focusBorderIntensity=c.focusBorderIntensity;focusBorderSpeed=c.focusBorderSpeed;initialized=true;return;}tintAlpha=lerp(tintAlpha,c.defaultTintAlpha,a);smoothing=lerp(smoothing,c.defaultSmoothing,a);blurRadius=lerp(blurRadius,c.defaultBlurRadius,a);shadowExpand=lerp(shadowExpand,c.defaultShadowExpand,a);shadowFactor=lerp(shadowFactor,c.defaultShadowFactor,a);shadowOffsetX=lerp(shadowOffsetX,c.defaultShadowOffsetX,a);shadowOffsetY=lerp(shadowOffsetY,c.defaultShadowOffsetY,a);refThickness=lerp(refThickness,c.defaultRefThickness,a);refFactor=lerp(refFactor,c.defaultRefFactor,a);refDispersion=lerp(refDispersion,c.defaultRefDispersion,a);refFresnelRange=lerp(refFresnelRange,c.defaultRefFresnelRange,a);refFresnelHardness=lerp(refFresnelHardness,c.defaultRefFresnelHardness,a);refFresnelFactor=lerp(refFresnelFactor,c.defaultRefFresnelFactor,a);glareRange=lerp(glareRange,c.defaultGlareRange,a);glareHardness=lerp(glareHardness,c.defaultGlareHardness,a);glareConvergence=lerp(glareConvergence,c.defaultGlareConvergence,a);glareOppositeFactor=lerp(glareOppositeFactor,c.defaultGlareOppositeFactor,a);glareFactor=lerp(glareFactor,c.defaultGlareFactor,a);glareAngleRad=lerp(glareAngleRad,c.defaultGlareAngleRad,a);debugStep=lerp(debugStep,c.debugStep,a);pixelatedGridSize=lerp(pixelatedGridSize,c.pixelatedGridSize,a);hoverScalePx=lerp(hoverScalePx,c.hoverScalePx,a);focusScalePx=lerp(focusScalePx,c.focusScalePx,a);focusBorderWidthPx=lerp(focusBorderWidthPx,c.focusBorderWidthPx,a);focusBorderIntensity=lerp(focusBorderIntensity,c.focusBorderIntensity,a);focusBorderSpeed=lerp(focusBorderSpeed,c.focusBorderSpeed,a);}private static float lerp(float a,float b,float t){return a+(b-a)*t;}public float tintAlpha(){return tintAlpha;}public float smoothing(){return smoothing;}public int blurRadiusInt(){return Math.max(0,Math.round(blurRadius));}public float shadowExpand(){return shadowExpand;}public float shadowFactor(){return shadowFactor;}public float shadowOffsetX(){return shadowOffsetX;}public float shadowOffsetY(){return shadowOffsetY;}public float refThickness(){return refThickness;}public float refFactor(){return refFactor;}public float refDispersion(){return refDispersion;}public float refFresnelRange(){return refFresnelRange;}public float refFresnelHardness(){return refFresnelHardness;}public float refFresnelFactor(){return refFresnelFactor;}public float glareRange(){return glareRange;}public float glareHardness(){return glareHardness;}public float glareConvergence(){return glareConvergence;}public float glareOppositeFactor(){return glareOppositeFactor;}public float glareFactor(){return glareFactor;}public float glareAngleRad(){return glareAngleRad;}public float debugStep(){return debugStep;}public float pixelatedGridSize(){return pixelatedGridSize;}public float hoverScalePx(){return hoverScalePx;}public float focusScalePx(){return focusScalePx;}public float focusBorderWidthPx(){return focusBorderWidthPx;}public float focusBorderIntensity(){return focusBorderIntensity;}public float focusBorderSpeed(){return focusBorderSpeed;}}
+
+/**
+ * Frame-rate independent animation state. All expensive configuration
+ * interpolation happens once per client tick; shaders receive the cached time
+ * instead of querying a clock for every widget.
+ */
+public final class ReGlassAnim {
+    public static final ReGlassAnim INSTANCE = new ReGlassAnim();
+
+    private boolean initialized;
+    private float tintAlpha;
+    private float timeSeconds;
+    private float shimmerPhase;
+    private float smoothing;
+    private float blurRadius;
+    private float shadowExpand;
+    private float shadowFactor;
+    private float shadowOffsetX;
+    private float shadowOffsetY;
+    private float refThickness;
+    private float refFactor;
+    private float refDispersion;
+    private float refFresnelRange;
+    private float refFresnelHardness;
+    private float refFresnelFactor;
+    private float glareRange;
+    private float glareHardness;
+    private float glareConvergence;
+    private float glareOppositeFactor;
+    private float glareFactor;
+    private float glareAngleRad;
+    private float debugStep;
+    private float pixelatedGridSize;
+    private float hoverScalePx;
+    private float focusScalePx;
+    private float focusBorderWidthPx;
+    private float focusBorderIntensity;
+    private float focusBorderSpeed;
+
+    private ReGlassAnim() {}
+
+    public void update(ReGlassConfig c, double dt) {
+        float delta = dt <= 0.0 ? 0.0f : (float) Math.min(dt, 0.1);
+        timeSeconds += delta;
+        if (timeSeconds >= 100000.0f) timeSeconds -= 100000.0f;
+        shimmerPhase = timeSeconds * 1.6f;
+
+        float alpha = delta <= 0.0f ? 0.0f : 1.0f - (float) Math.exp(-delta / 0.15f);
+        if (!initialized) {
+            tintAlpha = c.defaultTintAlpha;
+            smoothing = c.defaultSmoothing;
+            blurRadius = c.defaultBlurRadius;
+            shadowExpand = c.defaultShadowExpand;
+            shadowFactor = c.defaultShadowFactor;
+            shadowOffsetX = c.defaultShadowOffsetX;
+            shadowOffsetY = c.defaultShadowOffsetY;
+            refThickness = c.defaultRefThickness;
+            refFactor = c.defaultRefFactor;
+            refDispersion = c.defaultRefDispersion;
+            refFresnelRange = c.defaultRefFresnelRange;
+            refFresnelHardness = c.defaultRefFresnelHardness;
+            refFresnelFactor = c.defaultRefFresnelFactor;
+            glareRange = c.defaultGlareRange;
+            glareHardness = c.defaultGlareHardness;
+            glareConvergence = c.defaultGlareConvergence;
+            glareOppositeFactor = c.defaultGlareOppositeFactor;
+            glareFactor = c.defaultGlareFactor;
+            glareAngleRad = c.defaultGlareAngleRad;
+            debugStep = c.debugStep;
+            pixelatedGridSize = c.pixelatedGridSize;
+            hoverScalePx = c.hoverScalePx;
+            focusScalePx = c.focusScalePx;
+            focusBorderWidthPx = c.focusBorderWidthPx;
+            focusBorderIntensity = c.focusBorderIntensity;
+            focusBorderSpeed = c.focusBorderSpeed;
+            initialized = true;
+            return;
+        }
+
+        tintAlpha = lerp(tintAlpha, c.defaultTintAlpha, alpha);
+        smoothing = lerp(smoothing, c.defaultSmoothing, alpha);
+        blurRadius = lerp(blurRadius, c.defaultBlurRadius, alpha);
+        shadowExpand = lerp(shadowExpand, c.defaultShadowExpand, alpha);
+        shadowFactor = lerp(shadowFactor, c.defaultShadowFactor, alpha);
+        shadowOffsetX = lerp(shadowOffsetX, c.defaultShadowOffsetX, alpha);
+        shadowOffsetY = lerp(shadowOffsetY, c.defaultShadowOffsetY, alpha);
+        refThickness = lerp(refThickness, c.defaultRefThickness, alpha);
+        refFactor = lerp(refFactor, c.defaultRefFactor, alpha);
+        refDispersion = lerp(refDispersion, c.defaultRefDispersion, alpha);
+        refFresnelRange = lerp(refFresnelRange, c.defaultRefFresnelRange, alpha);
+        refFresnelHardness = lerp(refFresnelHardness, c.defaultRefFresnelHardness, alpha);
+        refFresnelFactor = lerp(refFresnelFactor, c.defaultRefFresnelFactor, alpha);
+        glareRange = lerp(glareRange, c.defaultGlareRange, alpha);
+        glareHardness = lerp(glareHardness, c.defaultGlareHardness, alpha);
+        glareConvergence = lerp(glareConvergence, c.defaultGlareConvergence, alpha);
+        glareOppositeFactor = lerp(glareOppositeFactor, c.defaultGlareOppositeFactor, alpha);
+        glareFactor = lerp(glareFactor, c.defaultGlareFactor, alpha);
+        glareAngleRad = lerp(glareAngleRad, c.defaultGlareAngleRad, alpha);
+        debugStep = lerp(debugStep, c.debugStep, alpha);
+        pixelatedGridSize = lerp(pixelatedGridSize, c.pixelatedGridSize, alpha);
+        hoverScalePx = lerp(hoverScalePx, c.hoverScalePx, alpha);
+        focusScalePx = lerp(focusScalePx, c.focusScalePx, alpha);
+        focusBorderWidthPx = lerp(focusBorderWidthPx, c.focusBorderWidthPx, alpha);
+        focusBorderIntensity = lerp(focusBorderIntensity, c.focusBorderIntensity, alpha);
+        focusBorderSpeed = lerp(focusBorderSpeed, c.focusBorderSpeed, alpha);
+    }
+
+    private static float lerp(float a, float b, float t) {
+        return a + (b - a) * t;
+    }
+
+    public float timeSeconds() { return timeSeconds; }
+    public float shimmerPhase() { return shimmerPhase; }
+    public float tintAlpha() { return tintAlpha; }
+    public float smoothing() { return smoothing; }
+    public int blurRadiusInt() { return Math.max(0, Math.round(blurRadius)); }
+    public float shadowExpand() { return shadowExpand; }
+    public float shadowFactor() { return shadowFactor; }
+    public float shadowOffsetX() { return shadowOffsetX; }
+    public float shadowOffsetY() { return shadowOffsetY; }
+    public float refThickness() { return refThickness; }
+    public float refFactor() { return refFactor; }
+    public float refDispersion() { return refDispersion; }
+    public float refFresnelRange() { return refFresnelRange; }
+    public float refFresnelHardness() { return refFresnelHardness; }
+    public float refFresnelFactor() { return refFresnelFactor; }
+    public float glareRange() { return glareRange; }
+    public float glareHardness() { return glareHardness; }
+    public float glareConvergence() { return glareConvergence; }
+    public float glareOppositeFactor() { return glareOppositeFactor; }
+    public float glareFactor() { return glareFactor; }
+    public float glareAngleRad() { return glareAngleRad; }
+    public float debugStep() { return debugStep; }
+    public float pixelatedGridSize() { return pixelatedGridSize; }
+    public float hoverScalePx() { return hoverScalePx; }
+    public float focusScalePx() { return focusScalePx; }
+    public float focusBorderWidthPx() { return focusBorderWidthPx; }
+    public float focusBorderIntensity() { return focusBorderIntensity; }
+    public float focusBorderSpeed() { return focusBorderSpeed; }
+}

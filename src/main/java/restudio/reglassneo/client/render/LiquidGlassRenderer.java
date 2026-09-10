@@ -12,10 +12,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.ShaderInstance;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
+import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 import restudio.reglassneo.client.LiquidGlassPipelines;
 import restudio.reglassneo.client.LiquidGlassUniforms;
 import restudio.reglassneo.client.api.WidgetStyle;
+import restudio.reglassneo.client.runtime.ReGlassAnim;
 
 public final class LiquidGlassRenderer {
     private LiquidGlassRenderer() {}
@@ -23,18 +25,14 @@ public final class LiquidGlassRenderer {
     private static TextureTarget backgroundTarget;
     private static int backgroundWidth = -1;
     private static int backgroundHeight = -1;
-    private static float cachedTime;
 
     public static void registerShaders(RegisterShadersEvent event) {
         LiquidGlassPipelines.registerShaders(event);
     }
 
     public static void beginFrame() {
-        updateTimeCache();
-    }
-
-    private static void updateTimeCache() {
-        cachedTime = (float) ((System.nanoTime() / 1_000_000_000.0) % 100000.0);
+        // Animation state is advanced once per client tick by ReGlassClient.
+        // Keep this hook cheap so every rendered widget does not touch the clock.
     }
 
     public static void render(GuiGraphics graphics, int x, int y, int width, int height,
@@ -85,13 +83,16 @@ public final class LiquidGlassRenderer {
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
         RenderSystem.setShader(() -> LiquidGlassPipelines.glassShader());
-        RenderSystem.setShaderTexture(0, backgroundTarget.getColorTextureId());
+        // Sampler1 is the dedicated background input used by the frosted-glass pass.
+        RenderSystem.setShaderTexture(1, backgroundTarget.getColorTextureId());
 
-        updateTimeCache();
+        ReGlassAnim anim = ReGlassAnim.INSTANCE;
         LiquidGlassUniforms.get().applyWidget(
                 shader, sw, sh, px, py, pw, ph, radius * scale,
                 style, hover, focus, progress
         );
+        var time = shader.getUniform("Time");
+        if (time != null) time.set(anim.timeSeconds());
 
         drawQuad(px - shadow, sh - py - ph - shadow,
                 pw + shadow * 2, ph + shadow * 2);
@@ -113,15 +114,13 @@ public final class LiquidGlassRenderer {
             backgroundTarget.setFilterMode(GL30.GL_LINEAR);
         }
 
-        // RenderTarget.copyDepthFrom() is intentionally not used: the glass only
-        // needs the already-rendered color buffer. blitToScreen() is also avoided
-        // because it would draw to the screen instead of copying into our target.
         main.bindRead();
-        backgroundTarget.bindWrite(false);
-        RenderSystem.blitFrameBuffer(
-                0, 0, width, height,
-                0, 0, width, height,
-                GL30.GL_COLOR_BUFFER_BIT, GL30.GL_NEAREST
+        RenderSystem.bindTexture(backgroundTarget.getColorTextureId());
+        GL11.glCopyTexSubImage2D(
+                GL11.GL_TEXTURE_2D, 0,
+                0, 0,
+                0, 0,
+                width, height
         );
         main.bindWrite(false);
     }
