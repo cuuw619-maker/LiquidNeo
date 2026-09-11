@@ -2,6 +2,7 @@ plugins {
     id 'java-library'
     id 'maven-publish'
     id 'net.neoforged.moddev' version '2.0.107'
+    id 'org.jetbrains.kotlin.jvm' version '2.2.20'
 }
 
 version = project.mod_version
@@ -40,6 +41,10 @@ repositories {
         name = 'CaffeineMC'
         url = 'https://maven.caffeinemc.net/releases'
     }
+    maven {
+        name = 'Kotlin for Forge'
+        url = 'https://thedarkcolour.github.io/KotlinForForge/'
+    }
 }
 
 neoForge {
@@ -70,17 +75,18 @@ neoForge {
 }
 
 dependencies {
-    // Architectury is a hard compile/runtime dependency. NeoForge enforces
-    // the corresponding mandatory dependency in neoforge.mods.toml.
     implementation "dev.architectury:architectury-neoforge:${project.architectury_version}"
-
-    // Sodium's Config API is compile-only. Sodium itself is never bundled.
     compileOnly "net.caffeinemc:sodium-neoforge-api:${project.sodium_version}"
+    implementation 'thedarkcolour:kotlinforforge-neoforge:5.10.0'
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.release = project.java_version as int
     options.encoding = 'UTF-8'
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
 }
 
 processResources {

@@ -11,15 +11,19 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.ShaderInstance;
+import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL30;
 import restudio.reglassneo.client.LiquidGlassPipelines;
 import restudio.reglassneo.client.LiquidGlassUniforms;
 import restudio.reglassneo.client.api.WidgetStyle;
-import restudio.reglassneo.client.runtime.ReGlassAnim;
+import restudio.reglassneo.client.runtime.ReGlassKotlinMath;
 
 public final class LiquidGlassRenderer {
+    private static final ResourceLocation NOISE_TEXTURE =
+            ResourceLocation.fromNamespaceAndPath("reglassneo", "textures/misc/glass_noise.png");
+
     private LiquidGlassRenderer() {}
 
     private static TextureTarget backgroundTarget;
@@ -31,8 +35,7 @@ public final class LiquidGlassRenderer {
     }
 
     public static void beginFrame() {
-        // Animation state is advanced once per client tick by ReGlassClient.
-        // Keep this hook cheap so every rendered widget does not touch the clock.
+        // Animation math is evaluated once per render submission through Kotlin helpers.
     }
 
     public static void render(GuiGraphics graphics, int x, int y, int width, int height,
@@ -82,17 +85,20 @@ public final class LiquidGlassRenderer {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
         RenderSystem.disableDepthTest();
-        RenderSystem.setShader(() -> LiquidGlassPipelines.glassShader());
-        // Sampler1 is the dedicated background input used by the frosted-glass pass.
-        RenderSystem.setShaderTexture(1, backgroundTarget.getColorTextureId());
+        RenderSystem.setShader(() -> shader);
 
-        ReGlassAnim anim = ReGlassAnim.INSTANCE;
+        // Keep the three shader slots explicitly synchronized with the JSON order:
+        // 0 = current color source, 1 = captured screen, 2 = glass normal/noise map.
+        RenderSystem.setShaderTexture(0, mc.getMainRenderTarget().getColorTextureId());
+        RenderSystem.setShaderTexture(1, backgroundTarget.getColorTextureId());
+        RenderSystem.setShaderTexture(2, NOISE_TEXTURE);
+
         LiquidGlassUniforms.get().applyWidget(
                 shader, sw, sh, px, py, pw, ph, radius * scale,
                 style, hover, focus, progress
         );
         var time = shader.getUniform("Time");
-        if (time != null) time.set(anim.timeSeconds());
+        if (time != null) time.set(ReGlassKotlinMath.timeSeconds(System.nanoTime()));
 
         drawQuad(px - shadow, sh - py - ph - shadow,
                 pw + shadow * 2, ph + shadow * 2);
